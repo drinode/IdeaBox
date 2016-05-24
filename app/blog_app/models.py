@@ -1,10 +1,24 @@
+import datetime
+
 from peewee import *
 from playhouse.flask_utils import FlaskDB, get_object_or_404, object_list
 from playhouse.sqlite_ext import *
-from app import *
+from micawber import bootstrap_basic, parse_html
+from micawber.cache import Cache as OEmbedCache
+from markdown import markdown
+from markdown.extensions.codehilite import CodeHiliteExtension
+from markdown.extensions.extra import ExtraExtension
+from bs4 import BeautifulSoup
+from mail import app
 
-login_manager = LoginManager()
-class Entry(flask_db.Model):
+
+
+db = FlaskDB(app)
+database = db.database
+
+
+#login_manager = LoginManager()
+class Entry(db.Model):
     title = CharField()
     slug = CharField(unique=True)
     content = TextField()
@@ -75,3 +89,10 @@ class FTSEntry(FTSModel):
 
     class Meta:
         database = database
+
+def main():
+    database.create_tables([Entry, FTSEntry], safe=True)
+    app.run(debug=True)
+
+if __name__ == '__main__':
+    main()

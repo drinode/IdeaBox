@@ -1,4 +1,3 @@
-import datetime
 import functools
 import os
 import re
@@ -6,38 +5,28 @@ import urllib
 
 from flask import (Flask, flash, Markup, redirect, render_template, request,
                    Response, session, url_for)
-from markdown import markdown
-from markdown.extensions.codehilite import CodeHiliteExtension
-from markdown.extensions.extra import ExtraExtension
+from flask.ext.mail import Mail
 from micawber import bootstrap_basic, parse_html
 from micawber.cache import Cache as OEmbedCache
-from peewee import *
-from playhouse.flask_utils import FlaskDB, get_object_or_404, object_list
-from playhouse.sqlite_ext import *
-from bs4 import BeautifulSoup
 from models import *
 
 
 
-
+mail = Mail()
 #My demo login password.
 ADMIN_PASSWORD = 'secret'
 APP_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
+
+
 DATABASE = 'sqliteext:///%s' % os.path.join(APP_DIR, 'blog.db')
 DEBUG = False
-
-
 SECRET_KEY = 'shhh, secret!'
 SITE_WIDTH = 800
 
 
-#Creating my app
-app = Flask(__name__, template_folder='template')
-app.config.from_object(__name__)
-flask_db = FlaskDB(app)
-database = flask_db.database
+
 oembed_providers = bootstrap_basic(OEmbedCache())
 
 
@@ -54,8 +43,15 @@ def login_required(fn):
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
     next_url = request.args.get('next') or request.form.get('next')
-    form = LoginForm()
-    if form.validate_on_submit
+    if request.method == 'POST' and request.form.get('password'):
+        password = request.form.get('password')
+        if password == app.config['ADMIN_PASSWORD']:
+            session['logged_in'] = True
+            session.permanent = True  
+            flash('You are now logged in.', 'success')
+            return redirect(next_url or url_for('index'))
+        else:
+            flash('Incorrect password.', 'danger')
     return render_template('login.html', next_url=next_url)
 
 @app.route('/logout/', methods=['GET', 'POST'])
@@ -63,7 +59,7 @@ def logout():
     if request.method == 'POST':
         session.clear()
         return redirect(url_for('login'))
-    return render_template('template/logout.html')
+    return render_template('logout.html')
 
 @app.route('/')
 def index():
@@ -94,7 +90,7 @@ def create():
                 return redirect(url_for('edit', slug=entry.slug))
         else:
             flash('Title and Content are required.', 'danger')
-    return render_template('template/create.html')
+    return render_template('create.html')
 
 @app.route('/drafts/')
 @login_required
@@ -145,9 +141,6 @@ def clean_querystring(request_args, *keys_to_remove, **new_values):
 def not_found(exc):
     return Response('<h3>Not found</h3>'), 404
 
-def main():
-    database.create_tables([Entry, FTSEntry], safe=True)
-    app.run(debug=True)
 
-if __name__ == '__main__':
-    main()
+
+
